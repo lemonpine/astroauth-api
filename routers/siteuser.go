@@ -2,6 +2,7 @@ package routers
 
 import (
 	"astroauth-api/database"
+	"astroauth-api/middleware"
 	"astroauth-api/models"
 
 	"github.com/gin-gonic/gin"
@@ -13,7 +14,15 @@ func SiteUserRouter(router *gin.Engine) {
 	{
 		siteuser.POST("/register", SiteRegister)
 		siteuser.POST("/login", SiteLogin)
+		siteuser.POST("/protected", middleware.SessionMiddleware(), ProtectedRoute)
+
 	}
+}
+
+func ProtectedRoute(c *gin.Context) {
+	c.JSON(200, gin.H{
+		"message": "SESSION ENDPOINT",
+	})
 }
 
 func SiteRegister(c *gin.Context) {
