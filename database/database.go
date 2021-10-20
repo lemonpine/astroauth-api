@@ -12,12 +12,12 @@ var DB *gorm.DB
 var err error
 
 func InitialMigration() {
-	dsn := "host=localhost user=postgres password=1234 dbname=db2 port=5432 sslmode=disable TimeZone=Asia/Shanghai"
+	dsn := "host=localhost user=postgres password=1234 dbname=db3 port=5432 sslmode=disable TimeZone=Asia/Shanghai"
 
 	DB, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
 		panic("db error")
 	}
-	DB.AutoMigrate(&models.User{})
+	DB.AutoMigrate(&models.SiteUser{}, &models.App{}, &models.AppUser{}, &models.License{})
 	InitializeStore()
 }

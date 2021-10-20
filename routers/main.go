@@ -14,6 +14,9 @@ var router *gin.Engine
 func InitializeRouter() {
 	router = gin.New()
 	SiteUserRouter(router)
+	AppUserRouter(router)
+	LicenseRouter(router)
+	AppRouter(router)
 	router.Run(":8080")
 
 }

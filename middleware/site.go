@@ -2,29 +2,30 @@ package middleware
 
 import (
 	"astroauth-api/database"
-	"fmt"
+	"astroauth-api/models"
 
 	"github.com/gin-gonic/gin"
 )
 
-func SessionMiddleware() gin.HandlerFunc {
+/*
+	Can be applied to any endpoint
+	Session cookie must be passed, if nil or invalid function will abort/return
+	if cookie is valid, userid will be extracted then passed into the handler
+*/
+func CheckSession() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		c.JSON(200, gin.H{
-			"message": "SESSION MIDDLEWARE",
-		})
 		session, err := database.Store.Get(c.Request, "session")
-
 		if err != nil {
+			c.JSON(200, models.Error{Message: "session cookie requred"})
 			c.Abort()
-			fmt.Println("no sess")
 			return
 		}
 
 		if session.Values["userID"] == nil {
+			c.JSON(200, models.Error{Message: "session cookie invalid"})
 			c.Abort()
 		}
-		c.JSON(200, gin.H{
-			"uid": session.Values["userID"],
-		})
+
+		c.Set("userID", session.Values["userID"])
 	}
 }

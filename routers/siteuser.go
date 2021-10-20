@@ -2,7 +2,6 @@ package routers
 
 import (
 	"astroauth-api/database"
-	"astroauth-api/middleware"
 	"astroauth-api/models"
 
 	"github.com/gin-gonic/gin"
@@ -14,36 +13,24 @@ func SiteUserRouter(router *gin.Engine) {
 	{
 		siteuser.POST("/register", SiteRegister)
 		siteuser.POST("/login", SiteLogin)
-		siteuser.POST("/protected", middleware.SessionMiddleware(), ProtectedRoute)
-
 	}
 }
 
-func ProtectedRoute(c *gin.Context) {
-	c.JSON(200, gin.H{
-		"message": "SESSION ENDPOINT",
-	})
-}
-
 func SiteRegister(c *gin.Context) {
-	var rUser models.User
+	var rUser models.SiteUser
 
 	c.ShouldBindJSON(&rUser)
 
 	//Check if email is available
 	if err := database.DB.Where("email=?", rUser.Email).First(&rUser).Error; err == nil {
-		c.JSON(200, gin.H{
-			"message": "Email not available",
-		})
+		c.JSON(200, models.Error{Message: "Email not available"})
 		return
 	}
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(rUser.Password), 8)
 	if err != nil {
-		c.JSON(200, gin.H{
-			"message": "password hash error",
-		})
-		panic("HASH ERROR")
+		c.JSON(200, models.Error{Message: "Internal server error"})
+		return
 	}
 	rUser.Password = string(hashedPassword)
 
@@ -52,32 +39,24 @@ func SiteRegister(c *gin.Context) {
 }
 
 func SiteLogin(c *gin.Context) {
-	var rUser models.User
+	var rUser models.SiteUser
 	c.ShouldBindJSON(&rUser)
 
-	//Check user credentials
-	var DBUser models.User
-
-	//If any information is incorrect, "incorrect email address or password" will be returned.
+	var DBUser models.SiteUser
 
 	//Check if email exists
 	if err := database.DB.Where("email=?", rUser.Email).First(&DBUser).Error; err != nil {
-		c.JSON(200, gin.H{
-			"message": "email inco",
-		})
+		c.JSON(200, models.Error{Message: "Email or password incorrect"})
 		return
 	}
 
 	//Check password
-	err := bcrypt.CompareHashAndPassword([]byte(DBUser.Password), []byte(rUser.Password))
-	if err != nil { //Password does not match!
-		c.JSON(200, gin.H{
-			"message": "password incorrect",
-		})
+	if err := bcrypt.CompareHashAndPassword([]byte(DBUser.Password), []byte(rUser.Password)); err != nil {
+		c.JSON(200, models.Error{Message: "Email or password incorrect"})
 		return
 	}
 
-	//If email and password is correct
+	//If email and password is correct, send session
 	session, _ := database.Store.Get(c.Request, "session")
 	session.Values["userID"] = DBUser.ID
 

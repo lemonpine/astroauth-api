@@ -4,7 +4,7 @@ import (
 	"time"
 )
 
-type User struct {
+type SiteUser struct {
 	ID        uint   `gorm:"primaryKey"`
 	Email     string `json:"email" `
 	Password  string `json:"password"`
