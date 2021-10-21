@@ -9,16 +9,13 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-/*
-middleware.CheckApp() refers to a function which runs before every handler.
-it parses the app_id then queries the DB to check if the app exists
-*/
 func AppUserRouter(router *gin.Engine) {
 	appuser := router.Group("/app")
 
-	appuser.Use(middleware.CheckApp())
+	appuser.POST("/register", middleware.CheckApp(), AppRegister)
+
+	appuser.Use(middleware.CheckApp(), middleware.BasicAuth())
 	{
-		appuser.POST("/register", AppRegister)
 		appuser.POST("/login", AppLogin)
 	}
 }
@@ -59,7 +56,7 @@ func AppRegister(c *gin.Context) {
 	//Hash password
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(rUser.Password), 8)
 	if err != nil {
-		c.JSON(200, models.Error{Message: "Internal server error"})
+		c.JSON(500, models.Error{Message: "Internal server error"})
 		return
 	}
 	rUser.Password = string(hashedPassword)
@@ -71,24 +68,5 @@ func AppRegister(c *gin.Context) {
 func AppLogin(c *gin.Context) {
 	var rUser models.AppUser
 	c.ShouldBindJSON(&rUser)
-
-	//Validate user input
-
-	var DBUser models.AppUser
-
-	//Check if user exists
-	if err := database.DB.Where("email=? AND app_id=?", rUser.Email, rUser.AppID).First(&DBUser).Error; err != nil {
-		c.JSON(200, models.Error{Message: "Email or password incorrect"})
-
-		return
-	}
-
-	//Check password
-	err := bcrypt.CompareHashAndPassword([]byte(DBUser.Password), []byte(rUser.Password))
-	if err != nil {
-		c.JSON(200, models.Error{Message: "Email or password incorrect"})
-
-		return
-	}
 
 }
