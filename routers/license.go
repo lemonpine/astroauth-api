@@ -4,7 +4,6 @@ import (
 	"astroauth-api/database"
 	"astroauth-api/middleware"
 	"astroauth-api/models"
-	"fmt"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
@@ -28,7 +27,6 @@ func LicenseRouter(router *gin.Engine) {
 func AddLicense(c *gin.Context) {
 	var rLicense models.License
 	c.ShouldBindBodyWith(&rLicense, binding.JSON)
-	fmt.Println(rLicense.AppID)
 
 	err := rLicense.Validate()
 	if err != nil {
