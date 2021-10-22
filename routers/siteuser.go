@@ -8,6 +8,10 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+/*
+All routes for handling site user authentication
+*/
+
 func SiteUserRouter(router *gin.Engine) {
 	siteuser := router.Group("/site")
 	{
@@ -20,6 +24,13 @@ func SiteRegister(c *gin.Context) {
 	var rUser models.SiteUser
 
 	c.ShouldBindJSON(&rUser)
+
+	//Validate input
+	err := rUser.Validate()
+	if err != nil {
+		c.JSON(200, gin.H{"error": err})
+		return
+	}
 
 	//Check if email is available
 	if err := database.DB.Where("email=?", rUser.Email).First(&rUser).Error; err == nil {
@@ -41,6 +52,13 @@ func SiteRegister(c *gin.Context) {
 func SiteLogin(c *gin.Context) {
 	var rUser models.SiteUser
 	c.ShouldBindJSON(&rUser)
+
+	//Validate input
+	err := rUser.Validate()
+	if err != nil {
+		c.JSON(200, gin.H{"error": err})
+		return
+	}
 
 	var DBUser models.SiteUser
 

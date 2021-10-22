@@ -2,6 +2,9 @@ package models
 
 import (
 	"time"
+
+	validation "github.com/go-ozzo/ozzo-validation"
+	"github.com/go-ozzo/ozzo-validation/is"
 )
 
 type AppUser struct {
@@ -17,4 +20,14 @@ type AppUser struct {
 	Banned    bool
 	CreatedAt time.Time
 	UpdatedAt time.Time
+}
+
+func (u AppUser) Validate() error {
+	return validation.ValidateStruct(&u,
+		validation.Field(&u.Email, validation.Required, is.Email),
+		validation.Field(&u.Username, validation.Required),
+		validation.Field(&u.Password, validation.Required),
+		validation.Field(&u.HWID, validation.Required),
+		validation.Field(&u.AppID, validation.Required),
+	)
 }

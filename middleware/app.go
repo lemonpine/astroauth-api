@@ -7,6 +7,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 
 	"github.com/gin-gonic/gin"
+	"github.com/gin-gonic/gin/binding"
 )
 
 func BasicAuth() gin.HandlerFunc {
@@ -17,7 +18,7 @@ func BasicAuth() gin.HandlerFunc {
 		//Check if basic auth authorization header is present
 		username, password, err := c.Request.BasicAuth()
 		if !err {
-			c.JSON(401, models.Error{Message: "Unauthorized"})
+			c.JSON(401, models.Error{Message: "BasicAuth authorization header missing"})
 			c.Abort()
 			return
 		}
@@ -48,16 +49,15 @@ func BasicAuth() gin.HandlerFunc {
 
 func CheckApp() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		var rUser models.AppUser
-		c.ShouldBindJSON(&rUser)
+		var rApp models.App
 
-		var app models.App
+		//c.ShouldBindBodyWith is used instead of c.shouldbindjson, as it can redeclare the body in the next function
+		c.ShouldBindBodyWith(&rApp, binding.JSON)
 
-		if err := database.DB.Where("app_id=?", rUser.AppID).First(&app).Error; err != nil {
+		if err := database.DB.Where("app_id=?", rApp.AppID).First(&rApp).Error; err != nil {
 			c.JSON(404, models.Error{Message: "Application not found"})
 			c.Abort()
 			return
 		}
-
 	}
 }

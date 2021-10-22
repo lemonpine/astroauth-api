@@ -9,6 +9,10 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+/*
+All routes for handling app user authentication
+*/
+
 func AppUserRouter(router *gin.Engine) {
 	appuser := router.Group("/app")
 
@@ -25,6 +29,11 @@ func AppRegister(c *gin.Context) {
 	c.ShouldBindJSON(&rUser)
 
 	//Validate user input
+	err := rUser.Validate()
+	if err != nil {
+		c.JSON(200, gin.H{"error": err})
+		return
+	}
 
 	if rUser.License == "" || rUser.License == " " {
 		c.JSON(200, gin.H{
@@ -68,5 +77,11 @@ func AppRegister(c *gin.Context) {
 func AppLogin(c *gin.Context) {
 	var rUser models.AppUser
 	c.ShouldBindJSON(&rUser)
+
+	err := rUser.Validate()
+	if err != nil {
+		c.JSON(200, gin.H{"error": err})
+		return
+	}
 
 }

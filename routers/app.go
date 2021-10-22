@@ -8,6 +8,10 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+/*
+All routes for handling apps
+*/
+
 func AppRouter(router *gin.Engine) {
 	appuser := router.Group("/site")
 
@@ -18,14 +22,14 @@ func AppRouter(router *gin.Engine) {
 }
 
 func CreateApp(c *gin.Context) {
-	var app models.App
-	c.ShouldBindJSON(&app)
+	var rApp models.App
+	c.ShouldBindJSON(&rApp)
 
-	if err := database.DB.Where("name=?", app.Name).First(&app).Error; err == nil {
+	if err := database.DB.Where("name=?", rApp.Name).First(&rApp).Error; err == nil {
 		c.JSON(200, models.Error{Message: "Application name not available"})
 		return
 	}
-	app.OwnedBy = c.MustGet("userID").(uint)
-	database.DB.Create(&app)
-	c.JSON(200, app)
+	rApp.OwnedBy = c.MustGet("userID").(uint)
+	database.DB.Create(&rApp)
+	c.JSON(200, rApp)
 }

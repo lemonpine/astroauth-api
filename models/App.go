@@ -3,6 +3,7 @@ package models
 import (
 	"time"
 
+	validation "github.com/go-ozzo/ozzo-validation"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
@@ -21,4 +22,10 @@ func (a *App) BeforeCreate(tx *gorm.DB) (err error) {
 	// UUID version 4
 	a.AppID = uuid.NewString()
 	return
+}
+
+func (a App) Validate() error {
+	return validation.ValidateStruct(&a,
+		validation.Field(&a.Name, validation.Required),
+	)
 }
