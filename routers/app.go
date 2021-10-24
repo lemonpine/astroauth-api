@@ -26,6 +26,20 @@ func CreateApp(c *gin.Context) {
 	var rApp models.App
 	c.ShouldBindJSON(&rApp)
 
+	//Get max apps a user can create
+	var maxapp uint
+	database.DBB.QueryRow(context.Background(), "SELECT max_app FROM site_users WHERE id = $1", c.MustGet("userID")).Scan(&maxapp)
+
+	//get number of apps the user has
+	var appcount uint
+	database.DBB.QueryRow(context.Background(), "SELECT COUNT(*) FROM apps WHERE owned_by = $1", c.MustGet("userID")).Scan(&appcount)
+
+	//check if number apps is less than or equal to max apps
+	if appcount >= maxapp {
+		c.JSON(200, models.Error{Message: "Max apps reached"})
+		return
+	}
+
 	var name string
 	err := database.DBB.QueryRow(context.Background(), "SELECT name FROM apps WHERE name = $1", rApp.Name).Scan(&name)
 	if err == nil {

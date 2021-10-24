@@ -4,7 +4,6 @@ import (
 	"astroauth-api/database"
 	"astroauth-api/models"
 	"context"
-	"fmt"
 
 	"github.com/gin-gonic/gin/binding"
 
@@ -63,7 +62,8 @@ func CheckAppSite() gin.HandlerFunc {
 		}
 
 		var se string
-		fmt.Println(c.MustGet("userID"))
+		//SOMETHING TO DO WITH CHECKING IF THE USER OWNS THE APP
+		//I FUCKING FORGET THE POINT IN THIS
 		err2 := database.DBB.QueryRow(context.Background(), "SELECT app_id FROM apps WHERE owned_by = $1", c.MustGet("userID")).Scan(&se)
 		if err2 != nil {
 			c.JSON(401, models.Error{Message: "Unauthorized"})
