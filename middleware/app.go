@@ -3,6 +3,7 @@ package middleware
 import (
 	"astroauth-api/database"
 	"astroauth-api/models"
+	"context"
 
 	"golang.org/x/crypto/bcrypt"
 
@@ -10,10 +11,14 @@ import (
 	"github.com/gin-gonic/gin/binding"
 )
 
-func BasicAuth() gin.HandlerFunc {
+func AppBasicAuth() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		var rUser models.AppUser
-		c.ShouldBindJSON(&rUser)
+		type Request struct {
+			AppID string `json:"app_id" `
+		}
+
+		var r Request
+		c.ShouldBindBodyWith(&r, binding.JSON)
 
 		//Check if basic auth authorization header is present
 		username, password, err := c.Request.BasicAuth()
@@ -29,17 +34,19 @@ func BasicAuth() gin.HandlerFunc {
 			return
 		}
 
-		//Check if user exists
-		var DBUser models.AppUser
-		if err := database.DB.Where("username=? AND app_id=?", username, rUser.AppID).First(&DBUser).Error; err != nil {
-			c.JSON(200, models.Error{Message: "Username or password incorrect"})
+		var DBPassword string
+		err2 := database.DBB.QueryRow(context.Background(), "SELECT password FROM app_users WHERE username = $1 AND app_id = $2", username, r.AppID).Scan(&DBPassword)
+
+		if err2 != nil {
+			c.JSON(200, models.Error{Message: "Email or password incorrect"})
+			c.JSON(200, models.Error{Message: "middle email"})
+
 			c.Abort()
 			return
 		}
 
 		//Check password
-		err2 := bcrypt.CompareHashAndPassword([]byte(DBUser.Password), []byte(password))
-		if err2 != nil {
+		if err := bcrypt.CompareHashAndPassword([]byte(DBPassword), []byte(password)); err != nil {
 			c.JSON(200, models.Error{Message: "Username or password incorrect"})
 			c.Abort()
 			return
@@ -49,12 +56,24 @@ func BasicAuth() gin.HandlerFunc {
 
 func CheckApp() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		var rApp models.App
+		type Request struct {
+			AppID string `json:"app_id" `
+		}
 
+		var r Request
+		c.ShouldBindBodyWith(&r, binding.JSON)
+
+		if r.AppID == "" || r.AppID == " " {
+			c.JSON(404, models.Error{Message: "app_id cannot be blank"})
+			c.Abort()
+			return
+		}
 		//c.ShouldBindBodyWith is used instead of c.shouldbindjson, as it can redeclare the body in the next function
-		c.ShouldBindBodyWith(&rApp, binding.JSON)
+		c.ShouldBindBodyWith(&r, binding.JSON)
 
-		if err := database.DB.Where("app_id=?", rApp.AppID).First(&rApp).Error; err != nil {
+		var AppID string
+		err := database.DBB.QueryRow(context.Background(), "SELECT app_id FROM apps WHERE app_id = $1", r.AppID).Scan(&AppID)
+		if err != nil {
 			c.JSON(404, models.Error{Message: "Application not found"})
 			c.Abort()
 			return

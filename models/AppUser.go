@@ -9,8 +9,8 @@ import (
 
 type AppUser struct {
 	ID        uint      `gorm:"primaryKey"`
-	Email     string    `json:"email" `
-	Username  string    `json:"username" `
+	Email     string    `json:"email" gorm:"uniqueIndex"`
+	Username  string    `json:"username" gorm:"uniqueIndex"`
 	Password  string    `json:"password"`
 	HWID      string    `json:"hwid" gorm:"column:hwid"`
 	AppID     string    `json:"app_id" `

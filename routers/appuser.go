@@ -4,8 +4,13 @@ import (
 	"astroauth-api/database"
 	"astroauth-api/middleware"
 	"astroauth-api/models"
+	"fmt"
+	"time"
+
+	"strconv"
 
 	"github.com/gin-gonic/gin"
+	"github.com/gin-gonic/gin/binding"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -18,7 +23,7 @@ func AppUserRouter(router *gin.Engine) {
 
 	appuser.POST("/register", middleware.CheckApp(), AppRegister)
 
-	appuser.Use(middleware.CheckApp(), middleware.BasicAuth())
+	appuser.Use(middleware.CheckApp(), middleware.AppBasicAuth())
 	{
 		appuser.POST("/login", AppLogin)
 	}
@@ -26,7 +31,7 @@ func AppUserRouter(router *gin.Engine) {
 
 func AppRegister(c *gin.Context) {
 	var rUser models.AppUser
-	c.ShouldBindJSON(&rUser)
+	c.ShouldBindBodyWith(&rUser, binding.JSON)
 
 	//Validate user input
 	err := rUser.Validate()
@@ -46,7 +51,8 @@ func AppRegister(c *gin.Context) {
 	var license models.License
 	license.AppID = rUser.AppID
 	license.License = rUser.License
-	if err := database.DB.Where("license=? AND app_id=?", license.License, license.AppID).First(&license).Error; err != nil {
+
+	if err := database.DB.Where("license=? AND app_id=?", rUser.License, rUser.AppID).First(&license).Error; err != nil {
 		c.JSON(200, models.Error{Message: "License invalid"})
 		return
 	}
@@ -68,8 +74,14 @@ func AppRegister(c *gin.Context) {
 		c.JSON(500, models.Error{Message: "Internal server error"})
 		return
 	}
-	rUser.Password = string(hashedPassword)
 
+	rUser.Password = string(hashedPassword)
+	fmt.Println("hereee")
+
+	var s string = strconv.FormatUint(uint64(license.Length), 10)
+	fmt.Printf("s=%s\n", s)
+
+	rUser.Expiry = time.Now().Local().AddDate(0, 0, 1)
 	//Add user to DB
 	database.DB.Create(&rUser)
 }
@@ -78,10 +90,10 @@ func AppLogin(c *gin.Context) {
 	var rUser models.AppUser
 	c.ShouldBindJSON(&rUser)
 
-	err := rUser.Validate()
-	if err != nil {
-		c.JSON(200, gin.H{"error": err})
-		return
-	}
+	// err := rUser.Validate()
+	// if err != nil {
+	// 	return
+	// }
+	c.JSON(200, gin.H{"error": "logged"})
 
 }

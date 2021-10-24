@@ -10,7 +10,7 @@ import (
 
 type App struct {
 	AppID   string `json:"app_id" gorm:"primaryKey"`
-	Name    string `json:"name" `
+	Name    string `json:"name" gorm:"uniqueIndex"`
 	OwnedBy uint
 	// User      AppUser `gorm:"foreignKey:OwnedBy"`
 	// Banned    bool

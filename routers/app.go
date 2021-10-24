@@ -4,6 +4,7 @@ import (
 	"astroauth-api/database"
 	"astroauth-api/middleware"
 	"astroauth-api/models"
+	"context"
 
 	"github.com/gin-gonic/gin"
 )
@@ -25,8 +26,10 @@ func CreateApp(c *gin.Context) {
 	var rApp models.App
 	c.ShouldBindJSON(&rApp)
 
-	if err := database.DB.Where("name=?", rApp.Name).First(&rApp).Error; err == nil {
-		c.JSON(200, models.Error{Message: "Application name not available"})
+	var name string
+	err := database.DBB.QueryRow(context.Background(), "SELECT name FROM apps WHERE name = $1", rApp.Name).Scan(&name)
+	if err == nil {
+		c.JSON(200, models.Error{Message: "Name not available"})
 		return
 	}
 	rApp.OwnedBy = c.MustGet("userID").(uint)

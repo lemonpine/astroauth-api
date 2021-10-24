@@ -3,6 +3,9 @@ package routers
 import (
 	"astroauth-api/database"
 	"astroauth-api/models"
+	"context"
+
+	"github.com/gin-gonic/gin/binding"
 
 	"github.com/gin-gonic/gin"
 	"golang.org/x/crypto/bcrypt"
@@ -22,7 +25,6 @@ func SiteUserRouter(router *gin.Engine) {
 
 func SiteRegister(c *gin.Context) {
 	var rUser models.SiteUser
-
 	c.ShouldBindJSON(&rUser)
 
 	//Validate input
@@ -33,7 +35,9 @@ func SiteRegister(c *gin.Context) {
 	}
 
 	//Check if email is available
-	if err := database.DB.Where("email=?", rUser.Email).First(&rUser).Error; err == nil {
+	var email string
+	err = database.DBB.QueryRow(context.Background(), "SELECT email FROM site_users WHERE email = $1", rUser.Email).Scan(&email)
+	if err == nil {
 		c.JSON(200, models.Error{Message: "Email not available"})
 		return
 	}
@@ -50,33 +54,34 @@ func SiteRegister(c *gin.Context) {
 }
 
 func SiteLogin(c *gin.Context) {
-	var rUser models.SiteUser
-	c.ShouldBindJSON(&rUser)
+	var r models.SiteUser
+	c.ShouldBindBodyWith(&r, binding.JSON)
 
 	//Validate input
-	err := rUser.Validate()
+	err := r.Validate()
 	if err != nil {
 		c.JSON(200, gin.H{"error": err})
 		return
 	}
 
-	var DBUser models.SiteUser
-
-	//Check if email exists
-	if err := database.DB.Where("email=?", rUser.Email).First(&DBUser).Error; err != nil {
+	//Gets ID to set session , gets password to compare
+	var id uint
+	var password string
+	err = database.DBB.QueryRow(context.Background(), "SELECT id, password FROM site_users WHERE email = $1", r.Email).Scan(&id, &password)
+	if err != nil {
 		c.JSON(200, models.Error{Message: "Email or password incorrect"})
 		return
 	}
 
 	//Check password
-	if err := bcrypt.CompareHashAndPassword([]byte(DBUser.Password), []byte(rUser.Password)); err != nil {
+	if err := bcrypt.CompareHashAndPassword([]byte(password), []byte(r.Password)); err != nil {
 		c.JSON(200, models.Error{Message: "Email or password incorrect"})
 		return
 	}
 
 	//If email and password is correct, send session
 	session, _ := database.Store.Get(c.Request, "session")
-	session.Values["userID"] = DBUser.ID
+	session.Values["userID"] = id
 
 	session.Save(c.Request, c.Writer)
 	c.JSON(200, gin.H{
