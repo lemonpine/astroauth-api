@@ -4,6 +4,7 @@ import (
 	"astroauth-api/database"
 	"astroauth-api/models"
 	"context"
+	"time"
 
 	"golang.org/x/crypto/bcrypt"
 
@@ -35,12 +36,11 @@ func AppBasicAuth() gin.HandlerFunc {
 		}
 
 		var DBPassword string
-		err2 := database.DBB.QueryRow(context.Background(), "SELECT password FROM app_users WHERE username = $1 AND app_id = $2", username, r.AppID).Scan(&DBPassword)
+		var UserExpiry time.Time
+		err2 := database.DBB.QueryRow(context.Background(), "SELECT password, expiry FROM app_users WHERE username = $1 AND app_id = $2", username, r.AppID).Scan(&DBPassword, UserExpiry)
 
 		if err2 != nil {
-			c.JSON(200, models.Error{Message: "Email or password incorrect"})
-			c.JSON(200, models.Error{Message: "middle email"})
-
+			c.JSON(200, models.Error{Message: "Username or password incorrect"})
 			c.Abort()
 			return
 		}
@@ -51,6 +51,14 @@ func AppBasicAuth() gin.HandlerFunc {
 			c.Abort()
 			return
 		}
+
+		//Check if user has expired
+		if time.Now().After(UserExpiry) {
+			c.JSON(200, models.Error{Message: "User expired"})
+			c.Abort()
+			return
+		}
+
 	}
 }
 

@@ -9,10 +9,6 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-/*
-All routes for handling apps
-*/
-
 func AppRouter(router *gin.Engine) {
 	appuser := router.Group("/site")
 
@@ -46,6 +42,7 @@ func CreateApp(c *gin.Context) {
 		c.JSON(200, models.Error{Message: "Name not available"})
 		return
 	}
+
 	rApp.OwnedBy = c.MustGet("userID").(uint)
 	database.DB.Create(&rApp)
 	c.JSON(200, rApp)

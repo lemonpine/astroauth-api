@@ -4,19 +4,14 @@ import (
 	"astroauth-api/database"
 	"astroauth-api/middleware"
 	"astroauth-api/models"
-	"fmt"
 	"time"
 
-	"strconv"
+	"context"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
 	"golang.org/x/crypto/bcrypt"
 )
-
-/*
-All routes for handling app user authentication
-*/
 
 func AppUserRouter(router *gin.Engine) {
 	appuser := router.Group("/app")
@@ -47,27 +42,32 @@ func AppRegister(c *gin.Context) {
 		return
 	}
 
-	//Check if license exists
-	var license models.License
-	license.AppID = rUser.AppID
-	license.License = rUser.License
-
-	if err := database.DB.Where("license=? AND app_id=?", rUser.License, rUser.AppID).First(&license).Error; err != nil {
+	//get length to set expiry of user, checks if license exists, checks if its used
+	var LicenseLength uint
+	var LicenseLevel uint
+	var LicenseUsedBy uint
+	err = database.DBB.QueryRow(context.Background(), "SELECT length, level, used_by FROM licenses WHERE license = $1  AND app_id = $2", rUser.License, rUser.AppID).Scan(&LicenseLength, &LicenseLevel, &LicenseUsedBy)
+	if err != nil || LicenseUsedBy != 0 {
 		c.JSON(200, models.Error{Message: "License invalid"})
 		return
 	}
 
 	//Check if email is available
-	if err := database.DB.Where("email=? AND app_id=?", rUser.Email, rUser.AppID).First(&rUser).Error; err == nil {
+	var email string
+	err = database.DBB.QueryRow(context.Background(), "SELECT email FROM app_users WHERE email = $1  AND app_id = $2", rUser.Email, rUser.AppID).Scan(&email)
+	if err == nil {
 		c.JSON(200, models.Error{Message: "Email not available"})
 		return
 	}
 
-	//Check if username is availabe
-	if err := database.DB.Where("username=? AND app_id=?", rUser.Username, rUser.AppID).First(&rUser).Error; err == nil {
+	//Check if username is available
+	var username string
+	err = database.DBB.QueryRow(context.Background(), "SELECT username FROM app_users WHERE username = $1 AND app_id = $2", rUser.Username, rUser.AppID).Scan(&username)
+	if err == nil {
 		c.JSON(200, models.Error{Message: "Username not available"})
 		return
 	}
+
 	//Hash password
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(rUser.Password), 8)
 	if err != nil {
@@ -76,14 +76,14 @@ func AppRegister(c *gin.Context) {
 	}
 
 	rUser.Password = string(hashedPassword)
-	fmt.Println("hereee")
 
-	var s string = strconv.FormatUint(uint64(license.Length), 10)
-	fmt.Printf("s=%s\n", s)
-
-	rUser.Expiry = time.Now().Local().AddDate(0, 0, 1)
+	rUser.Expiry = time.Now().Local().Add(time.Hour * 24 * time.Duration(LicenseLength))
+	rUser.Level = LicenseLevel
 	//Add user to DB
 	database.DB.Create(&rUser)
+
+	//Set the license to used
+	database.DBB.QueryRow(context.Background(), "UPDATE licenses SET used_by = $1 WHERE license = $2", rUser.ID, rUser.License).Scan(&email)
 }
 
 func AppLogin(c *gin.Context) {

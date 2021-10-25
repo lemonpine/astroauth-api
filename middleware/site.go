@@ -49,27 +49,30 @@ func CheckAppSite() gin.HandlerFunc {
 			c.Abort()
 			return
 		}
-		//c.ShouldBindBodyWith is used instead of c.shouldbindjson, as it can redeclare the body in the next function
-		c.ShouldBindBodyWith(&r, binding.JSON)
 
-		var AppID string
 		var OwnedBy uint
-		err := database.DBB.QueryRow(context.Background(), "SELECT app_id, owned_by FROM apps WHERE app_id = $1", r.AppID).Scan(&AppID, &OwnedBy)
+		err := database.DBB.QueryRow(context.Background(), "SELECT owned_by FROM apps WHERE app_id = $1", r.AppID).Scan(&OwnedBy)
 		if err != nil {
 			c.JSON(404, models.Error{Message: "Application not found"})
 			c.Abort()
 			return
 		}
 
-		var se string
-		//SOMETHING TO DO WITH CHECKING IF THE USER OWNS THE APP
-		//I FUCKING FORGET THE POINT IN THIS
-		err2 := database.DBB.QueryRow(context.Background(), "SELECT app_id FROM apps WHERE owned_by = $1", c.MustGet("userID")).Scan(&se)
-		if err2 != nil {
+		if OwnedBy != c.MustGet("userID") {
 			c.JSON(401, models.Error{Message: "Unauthorized"})
 			c.Abort()
 			return
 		}
+
+		// var se string
+		// //SOMETHING TO DO WITH CHECKING IF THE USER OWNS THE APP
+		// //I FUCKING FORGET THE POINT IN THIS
+		// err2 := database.DBB.QueryRow(context.Background(), "SELECT app_id FROM apps WHERE owned_by = $1", c.MustGet("userID")).Scan(&se)
+		// if err2 != nil {
+		// 	c.JSON(401, models.Error{Message: "Unauthorized"})
+		// 	c.Abort()
+		// 	return
+		// }
 
 	}
 }

@@ -9,10 +9,6 @@ import (
 	"github.com/gin-gonic/gin/binding"
 )
 
-/*
-All routes for handling licenses within apps
-*/
-
 func LicenseRouter(router *gin.Engine) {
 	license := router.Group("/site/app")
 

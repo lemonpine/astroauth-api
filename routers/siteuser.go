@@ -11,10 +11,6 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-/*
-All routes for handling site user authentication
-*/
-
 func SiteUserRouter(router *gin.Engine) {
 	siteuser := router.Group("/site")
 	{
