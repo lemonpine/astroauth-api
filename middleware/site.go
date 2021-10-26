@@ -10,11 +10,6 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-/*
-	Can be applied to any endpoint
-	Session cookie must be passed, if nil or invalid function will abort/return
-	if cookie is valid, userid will be extracted then passed into the handler
-*/
 func CheckSession() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		session, err := database.Store.Get(c.Request, "session")
@@ -44,12 +39,6 @@ func CheckAppSite() gin.HandlerFunc {
 		var r Request
 		c.ShouldBindBodyWith(&r, binding.JSON)
 
-		if r.AppID == "" || r.AppID == " " {
-			c.JSON(404, models.Error{Message: "app_id cannot be blank"})
-			c.Abort()
-			return
-		}
-
 		var OwnedBy uint
 		err := database.DBB.QueryRow(context.Background(), "SELECT owned_by FROM apps WHERE app_id = $1", r.AppID).Scan(&OwnedBy)
 		if err != nil {
@@ -63,16 +52,5 @@ func CheckAppSite() gin.HandlerFunc {
 			c.Abort()
 			return
 		}
-
-		// var se string
-		// //SOMETHING TO DO WITH CHECKING IF THE USER OWNS THE APP
-		// //I FUCKING FORGET THE POINT IN THIS
-		// err2 := database.DBB.QueryRow(context.Background(), "SELECT app_id FROM apps WHERE owned_by = $1", c.MustGet("userID")).Scan(&se)
-		// if err2 != nil {
-		// 	c.JSON(401, models.Error{Message: "Unauthorized"})
-		// 	c.Abort()
-		// 	return
-		// }
-
 	}
 }

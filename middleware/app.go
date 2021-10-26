@@ -35,15 +35,17 @@ func AppBasicAuth() gin.HandlerFunc {
 			return
 		}
 
+		var ID uint
 		var DBPassword string
 		var UserExpiry time.Time
-		err2 := database.DBB.QueryRow(context.Background(), "SELECT password, expiry FROM app_users WHERE username = $1 AND app_id = $2", username, r.AppID).Scan(&DBPassword, UserExpiry)
+		err2 := database.DBB.QueryRow(context.Background(), "SELECT id, password, expiry FROM app_users WHERE username = $1 AND app_id = $2", username, r.AppID).Scan(&ID, &DBPassword, UserExpiry)
 
 		if err2 != nil {
 			c.JSON(200, models.Error{Message: "Username or password incorrect"})
 			c.Abort()
 			return
 		}
+		c.Set("UserID", ID)
 
 		//Check password
 		if err := bcrypt.CompareHashAndPassword([]byte(DBPassword), []byte(password)); err != nil {
@@ -71,20 +73,18 @@ func CheckApp() gin.HandlerFunc {
 		var r Request
 		c.ShouldBindBodyWith(&r, binding.JSON)
 
-		if r.AppID == "" || r.AppID == " " {
-			c.JSON(404, models.Error{Message: "app_id cannot be blank"})
-			c.Abort()
-			return
-		}
 		//c.ShouldBindBodyWith is used instead of c.shouldbindjson, as it can redeclare the body in the next function
 		c.ShouldBindBodyWith(&r, binding.JSON)
 
-		var AppID string
-		err := database.DBB.QueryRow(context.Background(), "SELECT app_id FROM apps WHERE app_id = $1", r.AppID).Scan(&AppID)
+		var AppName string
+		err := database.DBB.QueryRow(context.Background(), "SELECT name FROM apps WHERE app_id = $1", r.AppID).Scan(&AppName)
 		if err != nil {
 			c.JSON(404, models.Error{Message: "Application not found"})
 			c.Abort()
 			return
 		}
+		//Pass app id into next function
+		c.Set("AppID", r.AppID)
+		c.Set("AppName", AppName)
 	}
 }

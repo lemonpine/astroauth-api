@@ -7,6 +7,7 @@ import (
 	"context"
 
 	"github.com/gin-gonic/gin"
+	"github.com/gin-gonic/gin/binding"
 )
 
 func AppRouter(router *gin.Engine) {
@@ -14,15 +15,15 @@ func AppRouter(router *gin.Engine) {
 
 	appuser.Use(middleware.CheckSession())
 	{
-		appuser.POST("/app", CreateApp)
+		appuser.POST("/app", middleware.AppCreateValidation(), CreateApp)
 	}
 }
 
 func CreateApp(c *gin.Context) {
 	var rApp models.App
-	c.ShouldBindJSON(&rApp)
+	c.ShouldBindBodyWith(&rApp, binding.JSON)
 
-	//Get max apps a user can create
+	// Get max apps a user can create
 	var maxapp uint
 	database.DBB.QueryRow(context.Background(), "SELECT max_app FROM site_users WHERE id = $1", c.MustGet("userID")).Scan(&maxapp)
 
@@ -36,10 +37,13 @@ func CreateApp(c *gin.Context) {
 		return
 	}
 
-	var name string
-	err := database.DBB.QueryRow(context.Background(), "SELECT name FROM apps WHERE name = $1", rApp.Name).Scan(&name)
+	FindName, err := database.DBB.Exec(context.Background(), "SELECT name FROM apps WHERE name = $1", rApp.Name)
 	if err == nil {
-		c.JSON(200, models.Error{Message: "Name not available"})
+		c.JSON(500, models.Error{Message: "Internal server error"})
+		return
+	}
+	if FindName.RowsAffected() != 0 {
+		c.JSON(200, models.Error{Message: "Name not available 22222"})
 		return
 	}
 

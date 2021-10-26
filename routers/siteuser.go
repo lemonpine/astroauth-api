@@ -2,6 +2,7 @@ package routers
 
 import (
 	"astroauth-api/database"
+	"astroauth-api/middleware"
 	"astroauth-api/models"
 	"context"
 
@@ -14,8 +15,9 @@ import (
 func SiteUserRouter(router *gin.Engine) {
 	siteuser := router.Group("/site")
 	{
-		siteuser.POST("/register", SiteRegister)
-		siteuser.POST("/login", SiteLogin)
+		siteuser.POST("/register", middleware.SiteRegisterValidate(), SiteRegister)
+		siteuser.POST("/login", middleware.SiteRegisterValidate(), SiteLogin)
+
 	}
 }
 

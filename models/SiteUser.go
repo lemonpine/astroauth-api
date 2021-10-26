@@ -17,11 +17,6 @@ type SiteUser struct {
 	UpdatedAt time.Time
 }
 
-type SiteUserRequest struct {
-	Email    string `json:"email" gorm:"uniqueIndex"`
-	Password string `json:"password"`
-}
-
 func (u *SiteUser) BeforeCreate(tx *gorm.DB) (err error) {
 	// UUID version 4
 	u.MaxApp = 1

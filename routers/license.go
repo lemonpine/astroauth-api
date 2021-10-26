@@ -12,27 +12,20 @@ import (
 func LicenseRouter(router *gin.Engine) {
 	license := router.Group("/site/app")
 
-	license.Use(middleware.CheckSession(), middleware.CheckAppSite())
+	license.Use(middleware.CheckSession())
 	{
-		license.POST("/licenses", AddLicense)
+		license.POST("/licenses", middleware.AddLicenseValidate(), middleware.CheckAppSite(), AddLicense)
 		license.DELETE("/licenses", DeleteLicense)
 		license.GET("/licenses", GetLicenses)
 	}
 }
 
 func AddLicense(c *gin.Context) {
-	var rLicense models.License
-	c.ShouldBindBodyWith(&rLicense, binding.JSON)
+	var License models.License
+	c.ShouldBindBodyWith(&License, binding.JSON)
 
-	//Validate user input
-	err := rLicense.Validate()
-	if err != nil {
-		c.JSON(200, gin.H{"error": err})
-		return
-	}
-
-	database.DB.Create(&rLicense)
-	c.JSON(200, gin.H{"license": rLicense.License})
+	database.DB.Create(&License)
+	c.JSON(200, gin.H{"license": License.License})
 }
 
 func DeleteLicense(c *gin.Context) {

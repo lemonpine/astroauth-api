@@ -16,7 +16,7 @@ import (
 func AppUserRouter(router *gin.Engine) {
 	appuser := router.Group("/app")
 
-	appuser.POST("/register", middleware.CheckApp(), AppRegister)
+	appuser.POST("/register", middleware.AppUserRegisterValidate(), middleware.CheckApp(), AppRegister)
 
 	appuser.Use(middleware.CheckApp(), middleware.AppBasicAuth())
 	{
@@ -25,75 +25,83 @@ func AppUserRouter(router *gin.Engine) {
 }
 
 func AppRegister(c *gin.Context) {
-	var rUser models.AppUser
-	c.ShouldBindBodyWith(&rUser, binding.JSON)
-
-	//Validate user input
-	err := rUser.Validate()
-	if err != nil {
-		c.JSON(200, gin.H{"error": err})
-		return
-	}
-
-	if rUser.License == "" || rUser.License == " " {
-		c.JSON(200, gin.H{
-			"message": "license missing",
-		})
-		return
-	}
+	var User models.AppUser
+	c.ShouldBindBodyWith(&User, binding.JSON)
 
 	//get length to set expiry of user, checks if license exists, checks if its used
 	var LicenseLength uint
 	var LicenseLevel uint
 	var LicenseUsedBy uint
-	err = database.DBB.QueryRow(context.Background(), "SELECT length, level, used_by FROM licenses WHERE license = $1  AND app_id = $2", rUser.License, rUser.AppID).Scan(&LicenseLength, &LicenseLevel, &LicenseUsedBy)
+	err := database.DBB.QueryRow(context.Background(), "SELECT length, level, used_by FROM licenses WHERE license = $1  AND app_id = $2", User.License, User.AppID).Scan(&LicenseLength, &LicenseLevel, &LicenseUsedBy)
 	if err != nil || LicenseUsedBy != 0 {
 		c.JSON(200, models.Error{Message: "License invalid"})
 		return
 	}
 
 	//Check if email is available
-	var email string
-	err = database.DBB.QueryRow(context.Background(), "SELECT email FROM app_users WHERE email = $1  AND app_id = $2", rUser.Email, rUser.AppID).Scan(&email)
+	FindEmail, err := database.DBB.Exec(context.Background(), "SELECT email FROM app_users WHERE email = $1  AND app_id = $2", User.Email, User.AppID)
 	if err == nil {
+		c.JSON(500, models.Error{Message: "Internal server error"})
+		return
+	}
+	if FindEmail.RowsAffected() != 0 {
 		c.JSON(200, models.Error{Message: "Email not available"})
 		return
 	}
 
 	//Check if username is available
-	var username string
-	err = database.DBB.QueryRow(context.Background(), "SELECT username FROM app_users WHERE username = $1 AND app_id = $2", rUser.Username, rUser.AppID).Scan(&username)
+	FindName, err := database.DBB.Exec(context.Background(), "SELECT username FROM app_users WHERE username = $1 AND app_id = $2", User.Username, User.AppID)
 	if err == nil {
+		c.JSON(500, models.Error{Message: "Internal server error"})
+		return
+	}
+	if FindName.RowsAffected() != 0 {
 		c.JSON(200, models.Error{Message: "Username not available"})
 		return
 	}
 
 	//Hash password
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(rUser.Password), 8)
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(User.Password), 8)
+	if err != nil {
+		c.JSON(500, models.Error{Message: "Internal server error"})
+		return
+	}
+	User.Password = string(hashedPassword)
+
+	User.Expiry = time.Now().Local().Add(time.Hour * 24 * time.Duration(LicenseLength))
+	User.Level = LicenseLevel
+
+	//Add user to DB
+	database.DB.Create(&User)
+
+	//Set the license to used
+	database.DBB.Exec(context.Background(), "UPDATE licenses SET used_by = $1 WHERE license = $2", User.ID, User.License)
+}
+
+func AppLogin(c *gin.Context) {
+
+	//HEY FUTURE ARRY MAKE A CUSTOM STRUCT FOR GETTING THE ID THEN RETURN THE USER FROM DB
+	// var rUser models.AppUser
+	// c.ShouldBindJSON(&rUser)
+
+	var email string
+	var username string
+	var level uint
+	err := database.DBB.QueryRow(context.Background(), "SELECT email, username, level FROM app_users WHERE id = $1", c.MustGet("UserID")).Scan(&email, &username, &level) //DONT DELETE THIS THIS IS A WIP.
 	if err != nil {
 		c.JSON(500, models.Error{Message: "Internal server error"})
 		return
 	}
 
-	rUser.Password = string(hashedPassword)
-
-	rUser.Expiry = time.Now().Local().Add(time.Hour * 24 * time.Duration(LicenseLength))
-	rUser.Level = LicenseLevel
-	//Add user to DB
-	database.DB.Create(&rUser)
-
-	//Set the license to used
-	database.DBB.QueryRow(context.Background(), "UPDATE licenses SET used_by = $1 WHERE license = $2", rUser.ID, rUser.License).Scan(&email)
-}
-
-func AppLogin(c *gin.Context) {
-	var rUser models.AppUser
-	c.ShouldBindJSON(&rUser)
-
-	// err := rUser.Validate()
-	// if err != nil {
-	// 	return
-	// }
-	c.JSON(200, gin.H{"error": "logged"})
+	c.JSON(200, gin.H{
+		"user": gin.H{
+			"email":    email,
+			"username": username,
+			"level":    level,
+		},
+		"app": gin.H{
+			"name": c.MustGet("AppName"),
+		},
+	})
 
 }
