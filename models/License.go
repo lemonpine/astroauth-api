@@ -12,7 +12,7 @@ type License struct {
 	ID        uint   `gorm:"primaryKey"`
 	AppID     string `json:"app_id" `
 	License   string `gorm:"uniqueIndex"`
-	Length    uint   `json:"length" `
+	Length    string `json:"length" `
 	Level     uint   `json:"level" `
 	UsedBy    uint
 	CreatedAt time.Time

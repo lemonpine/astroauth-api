@@ -65,7 +65,8 @@ func AppRegister(c *gin.Context) {
 	}
 	User.Password = string(hashedPassword)
 
-	User.Expiry = time.Now().Local().Add(time.Hour * 24 * time.Duration(LicenseLength))
+	//EG: license length = 1h or 1m or 1d etc
+	User.Expiry = time.Now().Local().Add(time.Duration(LicenseLength))
 	User.Level = LicenseLevel
 
 	//Add user to DB
