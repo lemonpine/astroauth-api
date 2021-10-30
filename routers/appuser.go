@@ -17,11 +17,8 @@ func AppUserRouter(router *gin.Engine) {
 	appuser := router.Group("/app")
 
 	appuser.POST("/register", middleware.AppUserRegisterValidate(), middleware.CheckApp(), AppRegister)
+	appuser.POST("/login", middleware.AppUserLoginValidate(), middleware.CheckApp(), middleware.AppBasicAuth(), AppLogin)
 
-	appuser.Use(middleware.CheckApp(), middleware.AppBasicAuth())
-	{
-		appuser.POST("/login", AppLogin)
-	}
 }
 
 func AppRegister(c *gin.Context) {
@@ -80,14 +77,9 @@ func AppRegister(c *gin.Context) {
 
 func AppLogin(c *gin.Context) {
 
-	//HEY FUTURE ARRY MAKE A CUSTOM STRUCT FOR GETTING THE ID THEN RETURN THE USER FROM DB
-	// var rUser models.AppUser
-	// c.ShouldBindJSON(&rUser)
-
-	var email string
 	var username string
 	var level uint
-	err := database.DBB.QueryRow(context.Background(), "SELECT email, username, level FROM app_users WHERE id = $1", c.MustGet("UserID")).Scan(&email, &username, &level) //DONT DELETE THIS THIS IS A WIP.
+	err := database.DBB.QueryRow(context.Background(), "SELECT email, username, level FROM app_users WHERE id = $1", c.MustGet("UserID")).Scan(&username, &level)
 	if err != nil {
 		c.JSON(500, models.Error{Message: "Internal server error"})
 		return
@@ -95,7 +87,6 @@ func AppLogin(c *gin.Context) {
 
 	c.JSON(200, gin.H{
 		"user": gin.H{
-			"email":    email,
 			"username": username,
 			"level":    level,
 		},
@@ -103,5 +94,4 @@ func AppLogin(c *gin.Context) {
 			"name": c.MustGet("AppName"),
 		},
 	})
-
 }

@@ -15,7 +15,7 @@ func AppRouter(router *gin.Engine) {
 
 	appuser.Use(middleware.CheckSession())
 	{
-		appuser.POST("/app", middleware.AppCreateValidation(), CreateApp)
+		appuser.POST("/app", middleware.AppCreateValidation(), middleware.CheckAppSite(), CreateApp)
 	}
 }
 
@@ -43,7 +43,7 @@ func CreateApp(c *gin.Context) {
 		return
 	}
 	if FindName.RowsAffected() != 0 {
-		c.JSON(200, models.Error{Message: "Name not available 22222"})
+		c.JSON(200, models.Error{Message: "Name not available"})
 		return
 	}
 

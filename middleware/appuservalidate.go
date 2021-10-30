@@ -36,3 +36,27 @@ func AppUserRegisterValidate() gin.HandlerFunc {
 		}
 	}
 }
+
+func AppUserLoginValidate() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		type Request struct {
+			Username string `json:"username"`
+			Password string `json:"password"`
+			HWID     string `json:"hwid"`
+			AppID    string `json:"app_id" `
+		}
+
+		var r Request
+		c.ShouldBindBodyWith(&r, binding.JSON)
+
+		err := validation.ValidateStruct(&r,
+			validation.Field(&r.HWID, validation.Required),
+			validation.Field(&r.AppID, validation.Required),
+		)
+		if err != nil {
+			c.JSON(200, gin.H{"error": err})
+			c.Abort()
+			return
+		}
+	}
+}

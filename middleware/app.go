@@ -16,6 +16,7 @@ func AppBasicAuth() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		type Request struct {
 			AppID string `json:"app_id" `
+			HWID  string `json:"hwid"`
 		}
 
 		var r Request
@@ -38,10 +39,10 @@ func AppBasicAuth() gin.HandlerFunc {
 		var ID uint
 		var DBPassword string
 		var UserExpiry time.Time
-		err2 := database.DBB.QueryRow(context.Background(), "SELECT id, password, expiry FROM app_users WHERE username = $1 AND app_id = $2", username, r.AppID).Scan(&ID, &DBPassword, UserExpiry)
-
+		var HWID string
+		err2 := database.DBB.QueryRow(context.Background(), "SELECT id, password, expiry, hwid FROM app_users WHERE username = $1 AND app_id = $2", username, r.AppID).Scan(&ID, &DBPassword, &UserExpiry, &HWID)
 		if err2 != nil {
-			c.JSON(200, models.Error{Message: "Username or password incorrect"})
+			c.JSON(200, models.Error{Message: "Username or password incorrect mail"})
 			c.Abort()
 			return
 		}
@@ -49,7 +50,13 @@ func AppBasicAuth() gin.HandlerFunc {
 
 		//Check password
 		if err := bcrypt.CompareHashAndPassword([]byte(DBPassword), []byte(password)); err != nil {
-			c.JSON(200, models.Error{Message: "Username or password incorrect"})
+			c.JSON(200, models.Error{Message: "Username or password incorrect hsh"})
+			c.Abort()
+			return
+		}
+
+		if HWID != r.HWID {
+			c.JSON(200, models.Error{Message: "HWID incorrect"})
 			c.Abort()
 			return
 		}
@@ -60,7 +67,6 @@ func AppBasicAuth() gin.HandlerFunc {
 			c.Abort()
 			return
 		}
-
 	}
 }
 
@@ -71,9 +77,6 @@ func CheckApp() gin.HandlerFunc {
 		}
 
 		var r Request
-		c.ShouldBindBodyWith(&r, binding.JSON)
-
-		//c.ShouldBindBodyWith is used instead of c.shouldbindjson, as it can redeclare the body in the next function
 		c.ShouldBindBodyWith(&r, binding.JSON)
 
 		var AppName string

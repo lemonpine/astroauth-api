@@ -17,7 +17,6 @@ func SiteUserRouter(router *gin.Engine) {
 	{
 		siteuser.POST("/register", middleware.SiteRegisterValidate(), SiteRegister)
 		siteuser.POST("/login", middleware.SiteRegisterValidate(), SiteLogin)
-
 	}
 }
 
