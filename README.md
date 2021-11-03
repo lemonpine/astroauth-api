@@ -9,3 +9,4 @@ Postgresql
 
 PGX database driver for regular queries, and GORM to create records & tables
 
+there are a few features that i was too lazy to finish/fix
